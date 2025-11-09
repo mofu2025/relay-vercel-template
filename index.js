@@ -2,7 +2,6 @@ const userGasUrl = "https://script.google.com/macros/s/AKfycby3qqMPwBnSPftm3vbua
 
 export default async function handler(req, res) {
   try {
-    // ステップ①：トークン取得（未設定なら自動発行）
     const getTokenResp = await fetch(`${userGasUrl}?mode=token`);
     const tokenData = await getTokenResp.json();
 
@@ -13,38 +12,47 @@ export default async function handler(req, res) {
     const token = tokenData.token;
     const spreadsheetId = tokenData.userId;
 
-    // ステップ②：元の投稿データに auth・spreadsheetId を追加
-    const payload = {
-      ...req.body,
-      auth: token,
-      spreadsheetId
-    };
+    const posts = Array.isArray(req.body.post) ? req.body.post : [req.body.post];
+    const results = [];
 
-    // ステップ③：ユーザーGASにPOST（HTML返り対策付き）
-    const gasResp = await fetch(userGasUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json"  // ★ JSON以外のレスポンス（HTML）を防ぐ
-      },
-      redirect: "follow", // ★ リダイレクトを追跡
-      body: JSON.stringify(payload)
-    });
+    for (const singlePost of posts) {
+      const payload = {
+        ...req.body,
+        post: singlePost,
+        auth: token,
+        spreadsheetId
+      };
 
-    const contentType = gasResp.headers.get("content-type") || "";
-
-    // HTMLなどが返ってきた場合はエラー扱い
-    if (!contentType.includes("application/json")) {
-      const raw = await gasResp.text();
-      return res.status(500).json({
-        ok: false,
-        error: "GASからJSON以外のレスポンス（おそらくHTML）が返されました",
-        preview: raw.slice(0, 300)
+      const gasResp = await fetch(userGasUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        redirect: "follow",
+        body: JSON.stringify(payload)
       });
+
+      const contentType = gasResp.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const raw = await gasResp.text();
+        results.push({
+          ok: false,
+          error: "GASからJSON以外のレスポンス",
+          preview: raw.slice(0, 300)
+        });
+        continue;
+      }
+
+      const gasResult = await gasResp.json();
+      results.push(gasResult);
     }
 
-    const gasResult = await gasResp.json();
-    res.status(200).json(gasResult);
+    res.status(200).json({
+      ok: true,
+      count: results.length,
+      results
+    });
 
   } catch (err) {
     res.status(500).json({
