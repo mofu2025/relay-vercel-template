@@ -1,6 +1,6 @@
 // pages/api/relay.js
 // ✅ GPT→Relay→GAS 中継サーバー（Vercelにデプロイ）
-// ✅ 2025-11-12: spreadsheetId 自動補完対応版（B1トークン仕様対応）
+// ✅ 2025-11-12: spreadsheetId 自動補完＋安定版（B1トークン仕様対応）
 
 export default async function handler(req, res) {
   try {
@@ -10,17 +10,28 @@ export default async function handler(req, res) {
 
     let { auth, spreadsheetId, post, product, style, format, tags } = req.body;
 
-    // ✅ spreadsheetId が未指定なら GAS から自動取得
-    if (!spreadsheetId || spreadsheetId === "undefined") {
+    // ✅ spreadsheetId が未指定の場合は GAS から取得
+    if (!spreadsheetId || spreadsheetId === "undefined" || spreadsheetId === "") {
       const tokenResp = await fetch(
-        "https://script.google.com/macros/s/AKfycby3qqMPwBnSPftm3vbuaht6teJWD4wUmtuE246Csz8gVONSEYdIJacuou_WnNUTLGJY4g/exec"
+        "https://script.google.com/macros/s/AKfycby3qqMPwBnSPftm3vbuaht6teJWD4wUmtuE246Csz8gVONSEYdIJacuou_WnNUTLGJY4g/exec",
+        { method: "GET", headers: { "Accept": "application/json" } }
       );
-      const tokenJson = await tokenResp.json();
-      spreadsheetId = tokenJson.userId || "";
-      console.log("🔁 自動取得: spreadsheetId =", spreadsheetId);
+
+      const rawText = await tokenResp.text();
+      console.log("🛰 GAS応答内容:", rawText);
+
+      try {
+        const tokenJson = JSON.parse(rawText);
+        spreadsheetId = tokenJson.userId || "";
+        console.log("🔁 自動取得: spreadsheetId =", spreadsheetId);
+      } catch (jsonErr) {
+        console.error("💥 JSON解析エラー:", jsonErr.message);
+        throw new Error("GAS応答がJSON形式ではありません");
+      }
     }
 
     if (!auth || !spreadsheetId || !post) {
+      console.error("🚫 不足:", { auth, spreadsheetId, post });
       throw new Error("auth, spreadsheetId, post が不足しています");
     }
 
@@ -38,6 +49,8 @@ export default async function handler(req, res) {
       tags: tags || [],
     };
 
+    console.log("🚀 Relay → GAS payload:", payload);
+
     const gasResp = await fetch(gasUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -49,8 +62,11 @@ export default async function handler(req, res) {
       ? await gasResp.json()
       : await gasResp.text();
 
+    console.log("📡 GAS応答:", result);
+
     res.status(200).json({ ok: true, result });
   } catch (err) {
+    console.error("💥 Relay内部エラー:", err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 }
