@@ -1,6 +1,6 @@
 // pages/api/relay.js
 // ✅ GPT→Relay→GAS 中継サーバー（Vercel）
-// ✅ 2025-11-12: spreadsheetId 自動補完＋形式検証付き 安定版
+// ✅ 2025-11-12: spreadsheetId 自動補完＋authパラメータ連携対応 完全自動版
 
 export default async function handler(req, res) {
   try {
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
     if (isInvalidSheetId) {
       const tokenResp = await fetch(
-        "https://script.google.com/macros/s/AKfycby3qqMPwBnSPftm3vbuaht6teJWD4wUmtuE246Csz8gVONSEYdIJacuou_WnNUTLGJY4g/exec",
+        `https://script.google.com/macros/s/AKfycby3qqMPwBnSPftm3vbuaht6teJWD4wUmtuE246Csz8gVONSEYdIJacuou_WnNUTLGJY4g/exec?auth=${encodeURIComponent(auth)}`,
         { method: "GET", headers: { Accept: "application/json" } }
       );
 
