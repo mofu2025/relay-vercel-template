@@ -1,6 +1,15 @@
 {
-  "name": "relay-vercel-server",
+  "name": "relay-vercel-template",
   "version": "1.0.0",
-  "main": "index.js",
-  "type": "module"
+  "private": true,
+  "scripts": {
+    "start": "next start",
+    "build": "next build",
+    "dev": "next dev"
+  },
+  "dependencies": {
+    "next": "14.0.1",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  }
 }
