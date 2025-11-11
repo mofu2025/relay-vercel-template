@@ -1,6 +1,6 @@
 // pages/api/relay.js
-// ✅ GPT→Relay→GAS 中継サーバー（Vercelにデプロイ）
-// ✅ 2025-11-12: spreadsheetId 自動補完＋安定版（B1トークン仕様対応）
+// ✅ GPT→Relay→GAS 中継サーバー（Vercel）
+// ✅ 2025-11-12: spreadsheetId 自動補完＋形式検証付き 安定版
 
 export default async function handler(req, res) {
   try {
@@ -10,11 +10,17 @@ export default async function handler(req, res) {
 
     let { auth, spreadsheetId, post, product, style, format, tags } = req.body;
 
-    // ✅ spreadsheetId が未指定の場合は GAS から取得
-    if (!spreadsheetId || spreadsheetId === "undefined" || spreadsheetId === "") {
+    // ✅ spreadsheetId が未指定または形式不正なら自動取得
+    const isInvalidSheetId =
+      !spreadsheetId ||
+      spreadsheetId === "undefined" ||
+      spreadsheetId === "" ||
+      spreadsheetId.length < 20; // GoogleシートIDは通常44文字前後
+
+    if (isInvalidSheetId) {
       const tokenResp = await fetch(
         "https://script.google.com/macros/s/AKfycby3qqMPwBnSPftm3vbuaht6teJWD4wUmtuE246Csz8gVONSEYdIJacuou_WnNUTLGJY4g/exec",
-        { method: "GET", headers: { "Accept": "application/json" } }
+        { method: "GET", headers: { Accept: "application/json" } }
       );
 
       const rawText = await tokenResp.text();
@@ -53,7 +59,7 @@ export default async function handler(req, res) {
 
     const gasResp = await fetch(gasUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(payload),
     });
 
