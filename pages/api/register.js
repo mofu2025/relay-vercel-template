@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
     await doc.useServiceAccountAuth({
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n")
+      private_key: process.env.GOOGLE_PRIVATE_KEY.split(String.raw`\n`).join("\n"),
     });
 
     await doc.loadInfo();
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
     const rows = await sheet.getRows();
     const exists = rows.some(
-      r =>
+      (r) =>
         String(r.spreadsheetId).trim() === spreadsheetId &&
         String(r.token).trim() === token
     );
