@@ -2,11 +2,11 @@ import { GoogleSpreadsheet } from "google-spreadsheet";
 
 export default async function handler(req, res) {
   try {
-    // ★ 最重要：req.body は undefined なので自分で JSON を解析
-    const body = typeof req.body === "string"
-      ? JSON.parse(req.body)
-      : req.body || {};
+    if (req.method !== "POST") {
+      return res.status(405).json({ ok: false, error: "POST only" });
+    }
 
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     const { spreadsheetId, token } = body;
 
     if (!spreadsheetId || !token) {
@@ -20,10 +20,9 @@ export default async function handler(req, res) {
       "1lDR7uP5z38KabjDvJ3ZY2tUrp7bfzCwz2lX7v30fEdM"
     );
 
-    // ★ private_key の改行置換を修正（\\n → \n）
     await doc.useServiceAccountAuth({
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n")
     });
 
     await doc.loadInfo();
@@ -31,15 +30,21 @@ export default async function handler(req, res) {
 
     const rows = await sheet.getRows();
     const exists = rows.some(
-      r => r.spreadsheetId === spreadsheetId && r.token === token
+      r =>
+        String(r.spreadsheetId).trim() === spreadsheetId &&
+        String(r.token).trim() === token
     );
 
     if (!exists) {
-      await sheet.addRow({ spreadsheetId, token });
+      await sheet.addRow({
+        spreadsheetId,
+        token,
+        userName: "N/A",
+        registeredAt: new Date().toISOString()
+      });
     }
 
     return res.status(200).json({ ok: true });
-
   } catch (err) {
     return res.status(500).json({ ok: false, error: err.message });
   }
