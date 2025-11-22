@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     if (!spreadsheetId || !token) {
       return res.status(400).json({
         ok: false,
-        error: "spreadsheetId または token が未送信です"
+        error: "spreadsheetId または token が未送信です",
       });
     }
 
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
     await doc.useServiceAccountAuth({
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY.split(String.raw`\n`).join("\n"),
+      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
     });
 
     await doc.loadInfo();
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
         spreadsheetId,
         token,
         userName: "N/A",
-        registeredAt: new Date().toISOString()
+        registeredAt: new Date().toISOString(),
       });
     }
 
